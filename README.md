@@ -148,5 +148,3 @@ Please ensure your code adheres to the existing style and passes all tests.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
