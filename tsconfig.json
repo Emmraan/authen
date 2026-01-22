@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es2020",
+        "lib": ["es2020"],
+        "declaration": false,
+        "sourceMap": true,
+        "outDir": "dist",
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "strict": true,
+        "baseUrl": "./"
+    },
+    "exclude": [
+        "node_modules",
+        "dist",
+        "src/**/*.spec.ts",
+        "src/**/*.e2e-spec.ts"
+    ]
+}

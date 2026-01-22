@@ -1,0 +1,17 @@
+// tsconfig for production build. Tests (unit/e2e) are excluded so
+// test-only dependencies (e.g. @nestjs/testing) don't break the build.
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "outDir": "dist",
+        "declaration": false,
+        "sourceMap": false
+    },
+    "exclude": [
+        "node_modules",
+        "test",
+        "dist",
+        "src/**/*.spec.ts",
+        "src/**/*.e2e-spec.ts"
+    ]
+}

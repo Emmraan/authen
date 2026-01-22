@@ -1,0 +1,29 @@
+version: '3.8'
+services:
+    db:
+        image: postgres:15
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: authuser
+            POSTGRES_PASSWORD: authpass
+            POSTGRES_DB: authdb
+        volumes:
+            - db-data:/var/lib/postgresql/data
+        ports:
+            - '5432:5432'
+
+    app:
+        build: .
+        restart: unless-stopped
+        env_file:
+            - .env
+        depends_on:
+            - db
+        ports:
+            - '3000:3000'
+        volumes:
+            - ./:/app:cached
+        command: pnpm start:dev
+
+volumes:
+    db-data:
