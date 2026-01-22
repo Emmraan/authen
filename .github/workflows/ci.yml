@@ -32,17 +32,6 @@ jobs:
               uses: actions/setup-node@v4
               with:
                   node-version: ${{ env.NODE_VERSION }}
-
-            - name: Setup pnpm
-              uses: pnpm/action-setup@v4
-              with:
-                  version: 9
-                  run_install: false
-
-            - name: Setup pnpm cache
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ env.NODE_VERSION }}
                   cache: pnpm
 
             - name: Enable Corepack
@@ -75,25 +64,16 @@ jobs:
         timeout-minutes: 10
 
         steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
+            - uses: actions/checkout@v4
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: ${{ env.NODE_VERSION }}
-
-            - name: Setup pnpm
-              uses: pnpm/action-setup@v4
-              with:
-                  version: 9
-                  run_install: false
-
-            - name: Setup pnpm cache
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ env.NODE_VERSION }}
                   cache: pnpm
+
+            - name: Enable Corepack
+              run: corepack enable
 
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
