@@ -1,0 +1,37 @@
+name: CI (Quick)
+
+on:
+    push:
+        branches-ignore:
+            - main
+    pull_request:
+        branches-ignore:
+            - main
+
+permissions:
+    contents: read
+
+env:
+    NODE_VERSION: 22
+
+jobs:
+    quick-checks:
+        name: Lint • Typecheck
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Enable Corepack
+              run: |
+                  corepack enable
+                  corepack prepare pnpm@latest --activate
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: pnpm
+
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm lint
+            - run: pnpm typecheck

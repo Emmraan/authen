@@ -1,0 +1,64 @@
+name: CI (Full)
+
+on:
+    pull_request:
+        branches:
+            - main
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+concurrency:
+    group: ci-main
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+
+env:
+    NODE_VERSION: 22
+
+jobs:
+    test:
+        name: Lint • Typecheck • Test
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Enable Corepack
+              run: |
+                  corepack enable
+                  corepack prepare pnpm@latest --activate
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: pnpm
+
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm lint
+            - run: pnpm typecheck
+            - run: pnpm test
+
+    build:
+        name: Build
+        runs-on: ubuntu-latest
+        needs: test
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Enable Corepack
+              run: |
+                  corepack enable
+                  corepack prepare pnpm@latest --activate
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: pnpm
+
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm build
