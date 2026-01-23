@@ -2,9 +2,24 @@ name: CI
 
 on:
     push:
-        branches: [main]
+        paths:
+            - 'src/**'
+            - 'test/**'
+            - 'package.json'
+            - 'pnpm-lock.yaml'
+            - 'tsconfig.json'
+            - 'jest.config.cjs'
+            - '.github/workflows/ci.yml'
     pull_request:
-        branches: [main]
+        paths:
+            - 'src/**'
+            - 'test/**'
+            - 'package.json'
+            - 'pnpm-lock.yaml'
+            - 'tsconfig.json'
+            - 'jest.config.cjs'
+            - '.github/workflows/ci.yml'
+    workflow_dispatch:
 
 concurrency:
     group: ci-${{ github.ref }}
@@ -20,24 +35,23 @@ jobs:
     test:
         name: Lint • Typecheck • Test
         runs-on: ubuntu-latest
-        timeout-minutes: 15
+        timeout-minutes: 20
 
         steps:
-            - uses: actions/checkout@v4
+            - name: Checkout repository
+              uses: actions/checkout@v4
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: ${{ env.NODE_VERSION }}
-
-            - name: Enable Corepack
-              run: corepack enable
-
-            - name: Setup pnpm cache
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ env.NODE_VERSION }}
                   cache: pnpm
+                  cache-dependency-path: pnpm-lock.yaml
+
+            - name: Enable Corepack (pnpm)
+              run: |
+                  corepack enable
+                  corepack prepare pnpm@latest --activate
 
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
@@ -51,6 +65,13 @@ jobs:
             - name: Test
               run: pnpm test
 
+            - name: Upload coverage report
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: coverage-report
+                  path: coverage
+
     build:
         name: Build
         runs-on: ubuntu-latest
@@ -58,21 +79,20 @@ jobs:
         timeout-minutes: 10
 
         steps:
-            - uses: actions/checkout@v4
+            - name: Checkout repository
+              uses: actions/checkout@v4
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: ${{ env.NODE_VERSION }}
-
-            - name: Enable Corepack
-              run: corepack enable
-
-            - name: Setup pnpm cache
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ env.NODE_VERSION }}
                   cache: pnpm
+                  cache-dependency-path: pnpm-lock.yaml
+
+            - name: Enable Corepack (pnpm)
+              run: |
+                  corepack enable
+                  corepack prepare pnpm@latest --activate
 
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
