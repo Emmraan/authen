@@ -1,46 +1,146 @@
-# Contributing
+# 🤝 Contributing
 
-Thanks for contributing! This document outlines basic steps and expectations for contributing to the Auth Microservice.
+> **Thanks for contributing!** This document outlines basic steps and expectations for contributing to the Authen Microservice.
 
-1. Branches and PRs
+## 🌿 1. Branches and PRs
 
-- Create a feature branch from `main` named `feat/<short-description>` or `fix/<short-description>`.
-- Open pull requests against `main` with a clear description and screenshots (if applicable).
+### 📋 Branch Naming:
 
-2. Code style
+- Create a feature branch from `main` named:
+    - `feat/<short-description>` for new features
+    - `fix/<short-description>` for bug fixes
+    - `docs/<short-description>` for documentation changes
+    - `refactor/<short-description>` for code restructuring
 
-- Follow existing patterns and prefer small, focused commits.
-- Run linters and formatters before committing:
+### 📝 Pull Requests:
+
+- Open pull requests against `main` with a clear description
+- Include screenshots (if applicable)
+- Link relevant issues if any
+
+## 🎨 2. Code Style
+
+### ✅ Guidelines:
+
+- Follow existing patterns and conventions
+- Prefer small, focused commits
+- Write clean, readable code
+- Add appropriate comments when necessary
+
+### 🔧 Before committing, run linters and formatters:
 
 ```bash
 pnpm lint && pnpm format:check
 ```
 
-3. Tests
+## 🧪 3. Tests
 
-- Add unit tests for new logic and integration tests when adding new HTTP behavior.
-- Run the test suite locally:
+### 📋 Testing Requirements:
+
+- Add **unit tests** for new logic
+- Add **integration tests** when adding new HTTP behavior
+- Ensure all tests pass before submitting
+
+### 🏃 Run the test suite locally:
 
 ```bash
 pnpm test
 ```
 
-Integration and unit tests live under `test/`
+### 📁 Test Structure:
 
-4. CI and verification
+- Integration and unit tests live under `test/`
+- Follow existing test patterns and naming conventions
 
-- The project has a `pnpm verify` script that runs lint, typecheck, tests, format check, and build. Run this before opening a PR:
+## 🔄 4. CI and Verification
+
+### ⚡ Before opening a PR:
+
+The project has a `pnpm verify` script that runs:
+
+- ✅ Lint
+- 📝 Typecheck
+- 🧪 Tests
+- 🎨 Format check
+- 🏗️ Build
+
+### 🏃 Run verification:
 
 ```bash
 pnpm verify
 ```
 
-5. Security
+## 🔒 5. Security
 
-- Never commit secrets. Use environment variables and CI secret storage.
+### 🛡️ Security Guidelines:
 
-6. Review
+- ❌ **Never commit secrets** (API keys, passwords, tokens)
+- 🌐 **Use environment variables** for configuration
+- 🔐 **Use CI secret storage** for deployment credentials
+- 📋 Review your changes for sensitive data before committing
 
-- Add reviewers and respond to code review feedback. Keep changes small and well-documented.
+> ⚠️ **Important:** Always double-check your commits for accidental secret exposure!
 
-Thank you for improving the project!
+## 👀 6. Code Review
+
+### 📋 Review Process:
+
+- 🏷️ **Add relevant reviewers** to your PR
+- 💬 **Respond promptly** to code review feedback
+- 📝 **Keep changes small** and well-documented
+- 🎯 **Address all review comments** before requesting merge
+
+### ✨ Best Practices:
+
+- Provide clear explanations for complex changes
+- Include test coverage for new features
+- Update documentation when necessary
+- Be respectful and constructive in discussions
+
+## 🏷️ 7. Commit Types
+
+Use conventional commit messages with the following types:
+
+### 📋 Commit Type Guidelines:
+
+| Type         | Description         | Example                                  |
+| ------------ | ------------------- | ---------------------------------------- |
+| **feat**     | ✨ New feature      | `feat: add user registration endpoint`   |
+| **fix**      | 🐛 Bug fix          | `fix: resolve token validation error`    |
+| **docs**     | 📚 Documentation    | `docs: update API documentation`         |
+| **refactor** | ♻️ Code restructure | `refactor: simplify auth service logic`  |
+| **style**    | 🎨 Formatting only  | `style: fix code formatting issues`      |
+| **test**     | 🧪 Tests            | `test: add unit tests for login service` |
+| **chore**    | 🔧 Maintenance      | `chore: update dependencies`             |
+
+### 📝 Commit Message Format:
+
+```
+<type>: <description>
+
+[optional body]
+
+[optional footer]
+```
+
+### ✅ Examples:
+
+```bash
+feat: add user registration endpoint
+- Implement email validation
+- Add password strength requirements
+- Create user repository methods
+
+fix: resolve token validation error
+Tokens were not properly validated during refresh flow
+
+refactor: simplify auth service logic
+Remove duplicate code and improve error handling
+```
+
+---
+
+<div align="center">
+  <strong>Thank you for improving the project! 🎉</strong><br>
+  Your contributions help make Authen better for everyone.
+</div>
