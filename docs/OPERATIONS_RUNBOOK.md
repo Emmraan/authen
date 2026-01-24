@@ -33,9 +33,9 @@ pnpm migrate:run
 ## Monitoring & Alerts (placeholders)
 
 - Add alerting for:
-  - Migration failures
-  - Repeated token reuse events
-  - Rate-limit spikes (traffic anomalies)
+    - Migration failures
+    - Repeated token reuse events
+    - Rate-limit spikes (traffic anomalies)
 - Integrate logs with your logging provider and create dashboards for authentication metrics.
 
 ## Runbook: emergency rollback
@@ -43,6 +43,6 @@ pnpm migrate:run
 - If a migration is destructive and causes issues, restore from backups and redeploy the previous app version.
 - Maintain DB backups and a tested rollback plan per migration window.
 
-***
+---
 
 For further operationalization, adapt these steps to your hosting environment (Kubernetes, VM, PaaS) and CI/CD provider.
