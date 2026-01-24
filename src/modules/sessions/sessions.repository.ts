@@ -28,11 +28,13 @@ export interface SessionsRepository {
         sessionId: string,
         incomingHash: string,
         newHash: string,
-        newExpiresAt: Date
+        newExpiresAt: Date,
+        incomingJti?: string | null
     ): Promise<{
         success: boolean
         userId?: string
         previousHash?: string | null
+        previousJti?: string | null
     }>
 
     revokeSession(sessionId: string, reason?: string): Promise<void>

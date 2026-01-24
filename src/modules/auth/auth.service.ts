@@ -1,9 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common'
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common'
+import { v4 as uuidv4 } from 'uuid'
 import { UsersService } from '../users/users.service'
 import { TokensService } from '../tokens/tokens.service'
 import { JwtService } from '@nestjs/jwt'
 import { ConfigService } from '../../config/config.service'
 import { comparePasswords } from '../../utils/hash.util'
+import { SessionsService } from '../sessions/sessions.service'
 
 @Injectable()
 export class AuthService {
@@ -11,12 +13,14 @@ export class AuthService {
     private refreshSecret: string
     private accessExpiresIn: string
     private refreshExpiresIn: string
+    private logger = new Logger(AuthService.name)
 
     constructor(
         private usersService: UsersService,
         private tokensService: TokensService,
         private jwtService: JwtService,
-        private config: ConfigService
+        private config: ConfigService,
+        private sessionsService: SessionsService
     ) {
         this.accessSecret = this.config.get(
             'JWT_ACCESS_TOKEN_SECRET',
@@ -62,13 +66,30 @@ export class AuthService {
         })
         const refreshToken = this.jwtService.sign(
             { userId: user.id },
-            { secret: this.refreshSecret, expiresIn: this.refreshExpiresIn }
+            {
+                secret: this.refreshSecret,
+                expiresIn: this.refreshExpiresIn,
+                jwtid: uuidv4(),
+            }
         )
         await this.tokensService.storeRefreshToken(user.id, refreshToken)
-        return { accessToken, refreshToken }
+        // create a session record for refresh rotation + reuse detection
+        try {
+            const ttlSeconds = 7 * 24 * 60 * 60
+            const sess = await this.sessionsService.createSession(
+                user.id,
+                refreshToken,
+                {},
+                '127.0.0.1',
+                ttlSeconds
+            )
+            return { accessToken, refreshToken, sessionId: sess.sessionId }
+        } catch {
+            return { accessToken, refreshToken }
+        }
     }
 
-    async refresh(userId: string, refreshToken: string) {
+    async refresh(userId: string, refreshToken: string, sessionId?: string) {
         // verify token signature + existence
         try {
             const decoded: any = this.jwtService.verify(refreshToken, {
@@ -76,6 +97,50 @@ export class AuthService {
             })
             if (decoded.userId !== userId)
                 throw new UnauthorizedException('Invalid token payload')
+
+            // If sessionId is provided, perform early reuse detection using session metadata
+            if (sessionId) {
+                try {
+                    const sess = await this.sessionsService.findById(
+                        sessionId as any
+                    )
+                    if (sess) {
+                        // extract jti from incoming token
+                        let incomingJti: string | null = null
+                        try {
+                            const parts = (refreshToken || '').split('.')
+                            if (parts.length >= 2) {
+                                const payload = JSON.parse(
+                                    Buffer.from(parts[1], 'base64').toString(
+                                        'utf8'
+                                    )
+                                )
+                                incomingJti = payload.jti || null
+                            }
+                        } catch {
+                            void 0
+                        }
+                        // if incoming matches previous jti or previous hash -> treat as reuse
+                        if (
+                            (sess as any).previousRefreshTokenJti &&
+                            incomingJti &&
+                            (sess as any).previousRefreshTokenJti ===
+                                incomingJti
+                        ) {
+                            await this.sessionsService.revokeAll(
+                                userId,
+                                'token_reuse_detected'
+                            )
+                            throw new UnauthorizedException(
+                                'Refresh token reuse detected'
+                            )
+                        }
+                    }
+                } catch {
+                    // ignore and continue to token store validation
+                }
+            }
+
             await this.tokensService.validateRefreshToken(userId, refreshToken)
             const user = await this.usersService.findById(userId)
             const payload = this.buildAccessTokenPayload(user)
@@ -83,13 +148,53 @@ export class AuthService {
                 secret: this.accessSecret,
                 expiresIn: this.accessExpiresIn,
             })
-            // rotate refresh token: revoke old, issue new, store
+            // rotate refresh token: issue new token and attempt session rotate first
             const newRefreshToken = this.jwtService.sign(
                 { userId: user.id },
-                { secret: this.refreshSecret, expiresIn: this.refreshExpiresIn }
+                {
+                    secret: this.refreshSecret,
+                    expiresIn: this.refreshExpiresIn,
+                    jwtid: uuidv4(),
+                }
             )
-            await this.tokensService.revokeRefreshToken(userId, refreshToken)
-            await this.tokensService.storeRefreshToken(userId, newRefreshToken)
+
+            if (sessionId) {
+                const ttlSeconds = 7 * 24 * 60 * 60
+                const rotateRes = await this.sessionsService.rotate(
+                    sessionId,
+                    refreshToken,
+                    newRefreshToken,
+                    ttlSeconds
+                )
+                // debug log removed
+                // if rotation succeeded, update token store; otherwise reuse may have been detected
+                if (rotateRes.rotated) {
+                    await this.tokensService.revokeRefreshToken(
+                        userId,
+                        refreshToken
+                    )
+                    await this.tokensService.storeRefreshToken(
+                        userId,
+                        newRefreshToken
+                    )
+                } else {
+                    // if rotate reported a previousHash equal to incoming, reuse detection already handled
+                    // In any case, deny the refresh attempt
+                    throw new UnauthorizedException(
+                        'Invalid or reused refresh token'
+                    )
+                }
+            } else {
+                // no sessionId: fallback to token-store based rotation
+                await this.tokensService.revokeRefreshToken(
+                    userId,
+                    refreshToken
+                )
+                await this.tokensService.storeRefreshToken(
+                    userId,
+                    newRefreshToken
+                )
+            }
             return { accessToken, refreshToken: newRefreshToken }
         } catch {
             throw new UnauthorizedException('Invalid refresh token')

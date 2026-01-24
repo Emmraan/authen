@@ -18,15 +18,20 @@ export class SessionsController {
     @Get('sessions')
     async list(@Req() req: any) {
         const userId = req.user.userId
-        const rows = await this.sessions.listForUser(userId)
-        return rows.map((r) => ({
-            id: r.id,
-            deviceInfo: r.deviceInfo,
-            ipAddress: r.ipAddress,
-            expiresAt: r.expiresAt,
-            revokedAt: r.revokedAt,
-            lastUsedAt: r.lastUsedAt,
-        }))
+        try {
+            const rows = await this.sessions.listForUser(userId)
+            return rows.map((r) => ({
+                id: r.id,
+                deviceInfo: r.deviceInfo,
+                ipAddress: r.ipAddress,
+                expiresAt: r.expiresAt,
+                revokedAt: r.revokedAt,
+                lastUsedAt: r.lastUsedAt,
+            }))
+        } catch (err) {
+            console.error('[ERROR] sessions.list failed', err)
+            throw err
+        }
     }
 
     @UseGuards(JwtAuthGuard)

@@ -23,9 +23,31 @@ export class SessionsService {
         ttlSeconds: number
     ) {
         const sessionId = uuidv4()
-        const hmac = this.config.get('HMAC_SECRET')
-        const tokenHash = hashToken(rawRefreshToken, hmac)
+        // use KeyManager if available for hashing, otherwise fallback to simple HMAC
+        let tokenHash = ''
+        try {
+            const km = new KeyManager(this.config)
+            const keys = km.all()
+            tokenHash = hashWithKeys(rawRefreshToken, keys).hash
+        } catch {
+            const hmac = this.config.get('HMAC_SECRET')
+            tokenHash = hashToken(rawRefreshToken, hmac)
+        }
         const expiresAt = new Date(Date.now() + ttlSeconds * 1000)
+        const extractJti = (tok?: string) => {
+            try {
+                if (!tok) return null
+                const parts = tok.split('.')
+                if (parts.length < 2) return null
+                const payload = JSON.parse(
+                    Buffer.from(parts[1], 'base64').toString('utf8')
+                )
+                return payload.jti || null
+            } catch {
+                return null
+            }
+        }
+        const jti = extractJti(rawRefreshToken)
 
         const rec = await this.repo.create({
             id: sessionId,
@@ -34,7 +56,8 @@ export class SessionsService {
             deviceInfo,
             ipAddress,
             expiresAt,
-        })
+            refreshTokenJti: jti,
+        } as any)
         return { sessionId: rec.id, issuedAt: rec.createdAt, expiresAt }
     }
 
@@ -44,10 +67,26 @@ export class SessionsService {
         rawNew: string,
         newTtlSeconds: number
     ) {
+        // debug logs removed
         const hmac = this.config.get('HMAC_SECRET')
         // Backwards-compatible: if a KeyManager is available, use primary key for hashing
         let incomingHash = ''
         let newHash = ''
+        // extract jti from JWT payloads if present (best-effort, not verifying signature)
+        const extractJti = (tok?: string) => {
+            try {
+                if (!tok) return null
+                const parts = tok.split('.')
+                if (parts.length < 2) return null
+                const payload = JSON.parse(
+                    Buffer.from(parts[1], 'base64').toString('utf8')
+                )
+                return payload.jti || null
+            } catch {
+                return null
+            }
+        }
+        const incomingJti = extractJti(rawIncoming)
         try {
             const km = new KeyManager(this.config)
             const keys = km.all()
@@ -63,8 +102,10 @@ export class SessionsService {
             sessionId,
             incomingHash,
             newHash,
-            newExpiresAt
+            newExpiresAt,
+            incomingJti
         )
+        // debug logs removed
         if (res.success) {
             return { rotated: true, userId: res.userId }
         }
@@ -104,5 +145,9 @@ export class SessionsService {
 
     async listForUser(userId: string) {
         return await this.repo.listSessionsForUser(userId)
+    }
+
+    async findById(sessionId: string) {
+        return await this.repo.findById(sessionId)
     }
 }

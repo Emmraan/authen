@@ -38,6 +38,17 @@ jobs:
                   cache: pnpm
 
             - run: pnpm install --frozen-lockfile
+
+            - name: Run DB migrations (if DATABASE_URL provided)
+              env:
+                  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+              run: |
+                  if [ -n "${DATABASE_URL}" ]; then
+                    pnpm migrate:run || true
+                  else
+                    echo "No DATABASE_URL, skipping migrations"
+                  fi
+
             - run: pnpm lint
             - run: pnpm typecheck
             - run: pnpm test

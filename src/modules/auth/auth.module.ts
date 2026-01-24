@@ -13,13 +13,12 @@ import { AdminController } from '../admin/admin.controller'
 import { AdminService } from '../admin/admin.service'
 import { ConfigModule } from '../../config/config.module'
 import { ConfigService } from '../../config/config.service'
-import { RedisProvider } from '../../providers/redis.provider'
+import { RedisProvider, REDIS_CLIENT } from '../../providers/redis.provider'
 import { MailService } from '../../utils/mail.service'
 import { JwtAuthGuard } from '../../middleware/jwt-auth.guard'
 import { RateLimitMiddleware } from '../../middleware/rate-limit.middleware'
 import { SessionsController } from '../sessions/sessions.controller'
 import { SessionsService } from '../sessions/sessions.service'
-import { PostgresSessionsRepository } from '../sessions/postgres.sessions.repository'
 
 @Module({
     imports: [
@@ -50,21 +49,56 @@ import { PostgresSessionsRepository } from '../sessions/postgres.sessions.reposi
         AdminService,
         {
             provide: 'SESSIONS_REPOSITORY',
-            inject: [ConfigService],
-            useFactory: (config: ConfigService) => {
-                let pool: any = null
-                try {
-                    // keep `pg` optional for local/dev environments
-                    /* eslint-disable @typescript-eslint/no-require-imports */
-                    // eslint-disable-next-line @typescript-eslint/no-var-requires
-                    const { Pool } = require('pg')
-                    /* eslint-enable @typescript-eslint/no-require-imports */
-                    pool = new Pool({
-                        connectionString: config.get('DATABASE_URL'),
-                    })
-                } catch {
-                    // `pg` not installed or failed to initialize — fallback to null
+            inject: [ConfigService, REDIS_CLIENT],
+            useFactory: async (config: ConfigService, redisClient: any) => {
+                if (redisClient) {
+                    const mod =
+                        await import('../sessions/redis.sessions.repository')
+                    const RedisSessionsRepository = (mod as any)
+                        .RedisSessionsRepository
+                    return new RedisSessionsRepository(redisClient)
                 }
+
+                const dbUrl = config.get('DATABASE_URL')
+                let pool: any = null
+                if (dbUrl) {
+                    try {
+                        const pg = await import('pg')
+                        const Pool = (pg as any).Pool
+                        pool = new Pool({ connectionString: dbUrl })
+                        // probe sessions table for expected columns
+                        try {
+                            const probe = await pool.query(
+                                `SELECT column_name FROM information_schema.columns WHERE table_name='sessions' AND column_name='previous_refresh_token_hash' LIMIT 1`
+                            )
+                            if (
+                                !probe ||
+                                (probe.rows && probe.rows.length === 0)
+                            ) {
+                                // schema missing; fallback
+                                await pool.end()
+                                pool = null
+                            }
+                        } catch {
+                            await pool.end()
+                            pool = null
+                        }
+                    } catch {
+                        pool = null
+                    }
+                }
+
+                if (!pool) {
+                    const mod =
+                        await import('../sessions/in-memory.sessions.repository')
+                    const InMemorySessionsRepository = (mod as any)
+                        .InMemorySessionsRepository
+                    return new InMemorySessionsRepository()
+                }
+                const mod =
+                    await import('../sessions/postgres.sessions.repository')
+                const PostgresSessionsRepository = (mod as any)
+                    .PostgresSessionsRepository
                 return new PostgresSessionsRepository(pool)
             },
         },

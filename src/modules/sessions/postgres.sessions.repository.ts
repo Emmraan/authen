@@ -39,22 +39,31 @@ export class PostgresSessionsRepository implements SessionsRepository {
         sessionId: string,
         incomingHash: string,
         newHash: string,
-        newExpiresAt: Date
+        newExpiresAt: Date,
+        incomingJti?: string | null
     ): Promise<{
         success: boolean
         userId?: string
         previousHash?: string | null
+        previousJti?: string | null
     }> {
         // Atomic compare-and-swap: ensure refresh_token_hash matches incomingHash and not revoked
         const res = await this.pool.query(
             `UPDATE sessions
        SET previous_refresh_token_hash = refresh_token_hash,
+           previous_refresh_token_jti = $5,
            refresh_token_hash = $1,
            last_used_at = now(),
            expires_at = $2
        WHERE id = $3 AND refresh_token_hash = $4 AND revoked_at IS NULL
-       RETURNING user_id as "userId", previous_refresh_token_hash as "previousHash"`,
-            [newHash, newExpiresAt, sessionId, incomingHash]
+    RETURNING user_id as "userId", previous_refresh_token_hash as "previousHash", previous_refresh_token_jti as "previousJti"`,
+            [
+                newHash,
+                newExpiresAt,
+                sessionId,
+                incomingHash,
+                incomingJti || null,
+            ]
         )
 
         if (res.rowCount === 1)
@@ -62,12 +71,13 @@ export class PostgresSessionsRepository implements SessionsRepository {
                 success: true,
                 userId: res.rows[0].userId,
                 previousHash: res.rows[0].previousHash,
+                previousJti: res.rows[0].previousJti ?? null,
             }
 
         // No rows updated -> either mismatch or revoked
         // Fetch row to inspect previous_refresh_token_hash for reuse detection
         const r2 = await this.pool.query(
-            `SELECT user_id as "userId", previous_refresh_token_hash as "previousHash", refresh_token_hash as "currentHash", revoked_at FROM sessions WHERE id = $1 LIMIT 1`,
+            `SELECT user_id as "userId", previous_refresh_token_hash as "previousHash", previous_refresh_token_jti as "previousJti", refresh_token_hash as "currentHash", revoked_at FROM sessions WHERE id = $1 LIMIT 1`,
             [sessionId]
         )
         const row = r2.rows[0]
@@ -75,7 +85,8 @@ export class PostgresSessionsRepository implements SessionsRepository {
         return {
             success: false,
             userId: row.userId,
-            previousHash: row.previoushash ?? row.previousHash ?? null,
+            previousHash: row.previousHash ?? null,
+            previousJti: row.previousJti ?? null,
         }
     }
 

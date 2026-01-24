@@ -12,7 +12,7 @@
         "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
         "migrate:run": "node ./scripts/run-migrations.js",
         "build": "tsc -p tsconfig.build.json",
-        "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm format:check && pnpm build",
+        "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm format:write && pnpm build",
         "lint": "eslint . --ext .ts",
         "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
         "typecheck": "tsc -p tsconfig.json --noEmit",

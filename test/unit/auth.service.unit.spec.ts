@@ -15,13 +15,27 @@ describe('AuthService (unit)', () => {
         }
         const jwtService: any = { sign: jest.fn(), verify: jest.fn() }
         const config: any = { get: jest.fn().mockReturnValue('secret') }
+        const sessionsService: any = {
+            createSession: jest.fn(),
+            rotate: jest.fn(),
+            findById: jest.fn(),
+            revokeAll: jest.fn(),
+        }
         const sut = new AuthService(
             usersService,
             tokensService,
             jwtService,
-            config
+            config,
+            sessionsService
         )
-        return { sut, usersService, tokensService, jwtService, config }
+        return {
+            sut,
+            usersService,
+            tokensService,
+            jwtService,
+            config,
+            sessionsService,
+        }
     }
 
     it('signup delegates to usersService.create and returns user', async () => {

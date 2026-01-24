@@ -2,6 +2,7 @@
 import { Injectable, Inject, Optional } from '@nestjs/common'
 import { ConfigService } from '../config/config.service'
 import { REDIS_CLIENT } from '../providers/redis.provider'
+import { selectMailProvider } from './mail.provider'
 
 @Injectable()
 export class MailService {
@@ -23,7 +24,17 @@ export class MailService {
             )
             return
         }
-        // fallback to console for local/dev
+
+        // If no redis, try to send directly using selected provider (smtp or console)
+        const provider = selectMailProvider(this.config)
+        try {
+            await provider.send(payload)
+            return
+        } catch (err) {
+            console.warn('Mail send failed, falling back to console', err)
+        }
+
+        // final fallback to console for local/dev
         console.log('SEND EMAIL', payload)
     }
 
