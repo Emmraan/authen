@@ -9,8 +9,12 @@ import { AuthService } from './auth.service'
 import { AuthController } from './auth.controller'
 import { UsersModule } from '../users/users.module'
 import { TokensModule } from '../tokens/tokens.module'
+import { AdminController } from '../admin/admin.controller'
+import { AdminService } from '../admin/admin.service'
 import { ConfigModule } from '../../config/config.module'
 import { ConfigService } from '../../config/config.service'
+import { RedisProvider } from '../../providers/redis.provider'
+import { MailService } from '../../utils/mail.service'
 import { JwtAuthGuard } from '../../middleware/jwt-auth.guard'
 import { RateLimitMiddleware } from '../../middleware/rate-limit.middleware'
 import { SessionsController } from '../sessions/sessions.controller'
@@ -36,16 +40,31 @@ import { PostgresSessionsRepository } from '../sessions/postgres.sessions.reposi
             }),
         }),
     ],
-    controllers: [AuthController, SessionsController],
+    controllers: [AuthController, SessionsController, AdminController],
     providers: [
         AuthService,
         JwtAuthGuard,
         SessionsService,
+        RedisProvider,
+        MailService,
+        AdminService,
         {
             provide: 'SESSIONS_REPOSITORY',
-            useFactory: () => {
-                // NOTE: In production, replace with injected DB pool provider
-                const pool: any = null
+            inject: [ConfigService],
+            useFactory: (config: ConfigService) => {
+                let pool: any = null
+                try {
+                    // keep `pg` optional for local/dev environments
+                    /* eslint-disable @typescript-eslint/no-require-imports */
+                    // eslint-disable-next-line @typescript-eslint/no-var-requires
+                    const { Pool } = require('pg')
+                    /* eslint-enable @typescript-eslint/no-require-imports */
+                    pool = new Pool({
+                        connectionString: config.get('DATABASE_URL'),
+                    })
+                } catch {
+                    // `pg` not installed or failed to initialize — fallback to null
+                }
                 return new PostgresSessionsRepository(pool)
             },
         },

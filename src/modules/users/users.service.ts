@@ -7,12 +7,14 @@ import { InMemoryUsersRepository } from './in-memory.users.repository'
 import { CreateUserDto } from './dto/create-user.dto'
 import { hashPassword } from '../../utils/hash.util'
 import { ConfigService } from '../../config/config.service'
+import { AuditService } from '../audit/audit.service'
 
 @Injectable()
 export class UsersService {
     constructor(
         private usersRepo: InMemoryUsersRepository,
-        private config: ConfigService
+        private config: ConfigService,
+        private audit: AuditService
     ) {}
 
     async create(dto: CreateUserDto) {
@@ -67,5 +69,25 @@ export class UsersService {
         // no-op placeholder; sessions module handles revocation
         void userId
         return
+    }
+
+    async setActive(userId: string, active: boolean) {
+        const u = await this.usersRepo.findById(userId)
+        if (!u) throw new NotFoundException('User not found')
+        ;(u as any).isActive = active
+        await this.usersRepo.save(u as any)
+        await this.audit.log(
+            active ? 'admin_user_activated' : 'admin_user_deactivated',
+            userId,
+            { by: 'admin' }
+        )
+    }
+
+    async setRole(userId: string, role: string) {
+        const u = await this.usersRepo.findById(userId)
+        if (!u) throw new NotFoundException('User not found')
+        ;(u as any).role = role
+        await this.usersRepo.save(u as any)
+        await this.audit.log('admin_user_role_changed', userId, { role })
     }
 }

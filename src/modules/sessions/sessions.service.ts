@@ -1,15 +1,18 @@
 import { Injectable, Logger, Inject } from '@nestjs/common'
 import { SessionsRepository } from './sessions.repository'
+import { AuditService } from '../audit/audit.service'
 import { v4 as uuidv4 } from 'uuid'
-import { hashToken } from '../../utils/token.util'
+import { hashToken, hashWithKeys } from '../../utils/token.util'
 import { ConfigService } from '../../config/config.service'
+import { KeyManager } from '../../utils/key.manager'
 
 @Injectable()
 export class SessionsService {
     private logger = new Logger(SessionsService.name)
     constructor(
         @Inject('SESSIONS_REPOSITORY') private repo: SessionsRepository,
-        private config: ConfigService
+        private config: ConfigService,
+        private audit: AuditService
     ) {}
 
     async createSession(
@@ -42,8 +45,18 @@ export class SessionsService {
         newTtlSeconds: number
     ) {
         const hmac = this.config.get('HMAC_SECRET')
-        const incomingHash = hashToken(rawIncoming, hmac)
-        const newHash = hashToken(rawNew, hmac)
+        // Backwards-compatible: if a KeyManager is available, use primary key for hashing
+        let incomingHash = ''
+        let newHash = ''
+        try {
+            const km = new KeyManager(this.config)
+            const keys = km.all()
+            incomingHash = hashWithKeys(rawIncoming, keys).hash
+            newHash = hashWithKeys(rawNew, keys).hash
+        } catch {
+            incomingHash = hashToken(rawIncoming, hmac)
+            newHash = hashToken(rawNew, hmac)
+        }
         const newExpiresAt = new Date(Date.now() + newTtlSeconds * 1000)
 
         const res = await this.repo.rotateRefreshToken(
@@ -71,6 +84,9 @@ export class SessionsService {
                     this.logger.warn(
                         `Token reuse detected for user ${res.userId}. All sessions revoked.`
                     )
+                    await this.audit.log('token_reuse_detected', res.userId, {
+                        reason: 'previous_token_reused',
+                    })
                 }
             }
         }

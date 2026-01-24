@@ -83,7 +83,14 @@ export class AuthService {
                 secret: this.accessSecret,
                 expiresIn: this.accessExpiresIn,
             })
-            return { accessToken }
+            // rotate refresh token: revoke old, issue new, store
+            const newRefreshToken = this.jwtService.sign(
+                { userId: user.id },
+                { secret: this.refreshSecret, expiresIn: this.refreshExpiresIn }
+            )
+            await this.tokensService.revokeRefreshToken(userId, refreshToken)
+            await this.tokensService.storeRefreshToken(userId, newRefreshToken)
+            return { accessToken, refreshToken: newRefreshToken }
         } catch {
             throw new UnauthorizedException('Invalid refresh token')
         }

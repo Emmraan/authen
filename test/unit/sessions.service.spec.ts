@@ -30,7 +30,8 @@ describe('SessionsService', () => {
 
     beforeEach(() => {
         repo = makeRepo()
-        svc = new SessionsService(repo, mockConfig as any)
+        const mockAudit = { log: jest.fn().mockResolvedValue(undefined) }
+        svc = new SessionsService(repo, mockConfig as any, mockAudit as any)
     })
 
     it('createSession stores session and returns metadata', async () => {

@@ -80,9 +80,17 @@ describe('AuthService (unit)', () => {
             email: 'a@b.com',
             role: 'r',
         })
-        jwtService.sign.mockReturnValue('newAccess')
+        jwtService.sign.mockImplementation((payload: any) => {
+            // return 'newRefresh' only when signing the single-key refresh payload ({ userId })
+            if (payload && Object.keys(payload).length === 1 && payload.userId)
+                return 'newRefresh'
+            return 'newAccess'
+        })
         const res = await sut.refresh('u1', 'rtoken')
-        expect(res).toEqual({ accessToken: 'newAccess' })
+        expect(res).toEqual({
+            accessToken: 'newAccess',
+            refreshToken: 'newRefresh',
+        })
     })
 
     it('refresh throws UnauthorizedException when verify fails', async () => {
