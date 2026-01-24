@@ -45,4 +45,27 @@ export class UsersService {
         if (!u) throw new NotFoundException('User not found')
         return u
     }
+
+    async markEmailVerified(userId: string) {
+        const u = await this.usersRepo.findById(userId)
+        if (!u) throw new NotFoundException('User not found')
+        ;(u as any).emailVerified = true
+        await this.usersRepo.save(u as any)
+    }
+
+    async updatePassword(userId: string, newPassword: string) {
+        const u = await this.usersRepo.findById(userId)
+        if (!u) throw new NotFoundException('User not found')
+        const configured = this.config.getNumber('BCRYPT_SALT_ROUNDS', 12)
+        const saltRounds = configured >= 10 ? configured : 12
+        const hashed = await hashPassword(newPassword, saltRounds)
+        ;(u as any).password = hashed
+        await this.usersRepo.save(u as any)
+    }
+
+    async revokeAllSessions(userId: string) {
+        // no-op placeholder; sessions module handles revocation
+        void userId
+        return
+    }
 }

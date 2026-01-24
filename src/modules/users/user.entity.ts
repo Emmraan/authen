@@ -7,4 +7,9 @@ export class User {
     role!: UserRole
     isActive!: boolean
     createdAt!: Date
+    emailVerified?: boolean
+    failedLoginAttempts?: number
+    lockedUntil?: Date | null
+    lastLoginAt?: Date | null
+    name?: string
 }

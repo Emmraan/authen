@@ -1,4 +1,9 @@
-import { Module } from '@nestjs/common'
+import {
+    Module,
+    NestModule,
+    MiddlewareConsumer,
+    RequestMethod,
+} from '@nestjs/common'
 import { JwtModule } from '@nestjs/jwt'
 import { AuthService } from './auth.service'
 import { AuthController } from './auth.controller'
@@ -7,6 +12,10 @@ import { TokensModule } from '../tokens/tokens.module'
 import { ConfigModule } from '../../config/config.module'
 import { ConfigService } from '../../config/config.service'
 import { JwtAuthGuard } from '../../middleware/jwt-auth.guard'
+import { RateLimitMiddleware } from '../../middleware/rate-limit.middleware'
+import { SessionsController } from '../sessions/sessions.controller'
+import { SessionsService } from '../sessions/sessions.service'
+import { PostgresSessionsRepository } from '../sessions/postgres.sessions.repository'
 
 @Module({
     imports: [
@@ -27,8 +36,29 @@ import { JwtAuthGuard } from '../../middleware/jwt-auth.guard'
             }),
         }),
     ],
-    controllers: [AuthController],
-    providers: [AuthService, JwtAuthGuard],
-    exports: [AuthService],
+    controllers: [AuthController, SessionsController],
+    providers: [
+        AuthService,
+        JwtAuthGuard,
+        SessionsService,
+        {
+            provide: 'SESSIONS_REPOSITORY',
+            useFactory: () => {
+                // NOTE: In production, replace with injected DB pool provider
+                const pool: any = null
+                return new PostgresSessionsRepository(pool)
+            },
+        },
+    ],
+    exports: [AuthService, SessionsService],
 })
-export class AuthModule {}
+export class AuthModule implements NestModule {
+    configure(consumer: MiddlewareConsumer) {
+        consumer
+            .apply(RateLimitMiddleware)
+            .forRoutes(
+                { path: 'auth/login', method: RequestMethod.POST },
+                { path: 'auth/forgot-password', method: RequestMethod.POST }
+            )
+    }
+}
