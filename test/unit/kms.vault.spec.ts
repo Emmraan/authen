@@ -3,7 +3,7 @@ import { execSync } from 'child_process'
 
 jest.mock('child_process', () => ({
     execSync: jest.fn(),
-}));
+}))
 
 describe('VaultKeyProvider', () => {
     beforeEach(() => {

@@ -1,3 +1,4 @@
+require('dotenv').config()
 const fs = require('fs')
 const path = require('path')
 const { Client } = require('pg')
@@ -17,9 +18,7 @@ async function run() {
         process.exit(0)
     }
 
-    const databaseUrl =
-        process.env.POSTGRES_URL ||
-        'postgresql://authuser:authpass@localhost:5432/authdb'
+    const databaseUrl = process.env.DATABASE_URL || 'postgresql://authuser:authpass@localhost:5432/authdb'
     // Enable SSL for hosted providers (e.g., Supabase) when necessary.
     let clientOptions = { connectionString: databaseUrl }
     try {
