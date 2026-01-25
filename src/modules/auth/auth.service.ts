@@ -66,7 +66,9 @@ export class AuthService {
         if (!isValid) {
             // Increment failed attempts; service will set lock if threshold reached
             try {
-                await this.usersService.incrementFailedLoginAttempts((user as any).id)
+                await this.usersService.incrementFailedLoginAttempts(
+                    (user as any).id
+                )
             } catch {
                 // ignore errors in increment path
             }

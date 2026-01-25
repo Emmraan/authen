@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common'
 import { v4 as uuidv4 } from 'uuid'
-import { VerificationTokenRecord, VerificationTokenType } from './tokens.repository'
+import {
+    VerificationTokenRecord,
+    VerificationTokenType,
+} from './tokens.repository'
 
 @Injectable()
 export class InMemoryTokensRepository {

@@ -5,7 +5,11 @@ import { AppModule } from '../../src/app.module'
 import { MailService } from '../../src/utils/mail.service'
 
 class TestMailService {
-    public verificationEmails: Array<{ to: string; token: string; link: string }> = []
+    public verificationEmails: Array<{
+        to: string
+        token: string
+        link: string
+    }> = []
     public resetEmails: Array<{ to: string; token: string; link: string }> = []
 
     async sendVerificationEmail(to: string, token: string, opts: any) {
@@ -26,7 +30,9 @@ describe('Email flows e2e', () => {
 
     beforeAll(async () => {
         mailStub = new TestMailService()
-        const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+        const moduleRef = await Test.createTestingModule({
+            imports: [AppModule],
+        })
             .overrideProvider(MailService)
             .useValue(mailStub as any)
             .compile()
@@ -44,18 +50,31 @@ describe('Email flows e2e', () => {
         const password = 'Password123!'
 
         // signup
-        await request(server).post('/auth/signup').send({ email, password }).expect(HttpStatus.CREATED)
+        await request(server)
+            .post('/auth/signup')
+            .send({ email, password })
+            .expect(HttpStatus.CREATED)
 
         // resend verification -> should enqueue a verification email
-        await request(server).post('/auth/resend-verification').send({ email }).expect(HttpStatus.OK)
+        await request(server)
+            .post('/auth/resend-verification')
+            .send({ email })
+            .expect(HttpStatus.OK)
         expect(mailStub.verificationEmails.length).toBeGreaterThanOrEqual(1)
-        const token = mailStub.verificationEmails[mailStub.verificationEmails.length - 1].token
+        const token =
+            mailStub.verificationEmails[mailStub.verificationEmails.length - 1]
+                .token
 
         // verify-email
-        await request(server).post('/auth/verify-email').send({ token }).expect(HttpStatus.OK)
+        await request(server)
+            .post('/auth/verify-email')
+            .send({ token })
+            .expect(HttpStatus.OK)
 
         // login should be allowed
-        const login = await request(server).post('/auth/login').send({ email, password })
+        const login = await request(server)
+            .post('/auth/login')
+            .send({ email, password })
         expect([200, 201]).toContain(login.status)
     }, 20000)
 
@@ -64,24 +83,43 @@ describe('Email flows e2e', () => {
         const password = 'Password123!'
 
         // signup
-        await request(server).post('/auth/signup').send({ email, password }).expect(HttpStatus.CREATED)
+        await request(server)
+            .post('/auth/signup')
+            .send({ email, password })
+            .expect(HttpStatus.CREATED)
 
         // first resend
-        await request(server).post('/auth/resend-verification').send({ email }).expect(HttpStatus.OK)
+        await request(server)
+            .post('/auth/resend-verification')
+            .send({ email })
+            .expect(HttpStatus.OK)
         expect(mailStub.verificationEmails.length).toBeGreaterThanOrEqual(1)
-        const first = mailStub.verificationEmails[mailStub.verificationEmails.length - 1].token
+        const first =
+            mailStub.verificationEmails[mailStub.verificationEmails.length - 1]
+                .token
 
         // second resend
-        await request(server).post('/auth/resend-verification').send({ email }).expect(HttpStatus.OK)
-        const second = mailStub.verificationEmails[mailStub.verificationEmails.length - 1].token
+        await request(server)
+            .post('/auth/resend-verification')
+            .send({ email })
+            .expect(HttpStatus.OK)
+        const second =
+            mailStub.verificationEmails[mailStub.verificationEmails.length - 1]
+                .token
         expect(second).toBeTruthy()
         expect(second).not.toBe(first)
 
         // old token should fail
-        await request(server).post('/auth/verify-email').send({ token: first }).expect(HttpStatus.INTERNAL_SERVER_ERROR)
+        await request(server)
+            .post('/auth/verify-email')
+            .send({ token: first })
+            .expect(HttpStatus.INTERNAL_SERVER_ERROR)
 
         // new token should succeed
-        await request(server).post('/auth/verify-email').send({ token: second }).expect(HttpStatus.OK)
+        await request(server)
+            .post('/auth/verify-email')
+            .send({ token: second })
+            .expect(HttpStatus.OK)
     }, 20000)
 
     it('forgot-password -> reset-password -> login with new password', async () => {
@@ -90,21 +128,36 @@ describe('Email flows e2e', () => {
         const newPassword = 'NewPassword123!'
 
         // signup
-        await request(server).post('/auth/signup').send({ email, password }).expect(HttpStatus.CREATED)
+        await request(server)
+            .post('/auth/signup')
+            .send({ email, password })
+            .expect(HttpStatus.CREATED)
 
         // trigger forgot-password
-        await request(server).post('/auth/forgot-password').send({ email }).expect(HttpStatus.OK)
+        await request(server)
+            .post('/auth/forgot-password')
+            .send({ email })
+            .expect(HttpStatus.OK)
         expect(mailStub.resetEmails.length).toBeGreaterThanOrEqual(1)
-        const token = mailStub.resetEmails[mailStub.resetEmails.length - 1].token
+        const token =
+            mailStub.resetEmails[mailStub.resetEmails.length - 1].token
 
         // reset password
-        await request(server).post('/auth/reset-password').send({ token, newPassword }).expect(HttpStatus.OK)
+        await request(server)
+            .post('/auth/reset-password')
+            .send({ token, newPassword })
+            .expect(HttpStatus.OK)
 
         // login with old password should fail
-        await request(server).post('/auth/login').send({ email, password }).expect(HttpStatus.UNAUTHORIZED)
+        await request(server)
+            .post('/auth/login')
+            .send({ email, password })
+            .expect(HttpStatus.UNAUTHORIZED)
 
         // login with new password should succeed
-        const login = await request(server).post('/auth/login').send({ email, password: newPassword })
+        const login = await request(server)
+            .post('/auth/login')
+            .send({ email, password: newPassword })
         expect([200, 201]).toContain(login.status)
     }, 20000)
 })

@@ -26,7 +26,10 @@ export class VerificationService {
 
         // delete any previous tokens for this user/type so resend invalidates old tokens
         try {
-            await (this.repo as any).deleteVerificationTokensForUser(userId, type)
+            await (this.repo as any).deleteVerificationTokensForUser(
+                userId,
+                type
+            )
         } catch {
             // ignore if repository doesn't implement; best-effort
         }
