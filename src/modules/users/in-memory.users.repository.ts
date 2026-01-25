@@ -14,6 +14,10 @@ export class InMemoryUsersRepository {
             role: userPartial.role ?? 'user',
             isActive: userPartial.isActive ?? true,
             createdAt: new Date(),
+            emailVerified: userPartial.emailVerified ?? false,
+            failedLoginAttempts: userPartial.failedLoginAttempts ?? 0,
+            lockedUntil: userPartial.lockedUntil ?? null,
+            lastLoginAt: userPartial.lastLoginAt ?? null,
         }
         this.users.set(user.id, user)
         return this.filterSensitive(user)

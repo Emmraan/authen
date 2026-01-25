@@ -55,6 +55,29 @@ export class UsersService {
         await this.usersRepo.save(u as any)
     }
 
+    async incrementFailedLoginAttempts(userId: string) {
+        const u = await this.usersRepo.findById(userId)
+        if (!u) throw new NotFoundException('User not found')
+        const maxAttempts = this.config.getNumber('MAX_LOGIN_ATTEMPTS', 5)
+        const lockMinutes = this.config.getNumber('ACCOUNT_LOCKOUT_MINUTES', 15)
+        ;(u as any).failedLoginAttempts = (u as any).failedLoginAttempts
+            ? (u as any).failedLoginAttempts + 1
+            : 1
+        if ((u as any).failedLoginAttempts >= maxAttempts) {
+            const until = new Date(Date.now() + lockMinutes * 60 * 1000)
+            ;(u as any).lockedUntil = until
+        }
+        await this.usersRepo.save(u as any)
+    }
+
+    async resetFailedLoginAttempts(userId: string) {
+        const u = await this.usersRepo.findById(userId)
+        if (!u) throw new NotFoundException('User not found')
+        ;(u as any).failedLoginAttempts = 0
+        ;(u as any).lockedUntil = null
+        await this.usersRepo.save(u as any)
+    }
+
     async updatePassword(userId: string, newPassword: string) {
         const u = await this.usersRepo.findById(userId)
         if (!u) throw new NotFoundException('User not found')

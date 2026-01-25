@@ -51,4 +51,15 @@ export class PostgresTokensRepository implements TokensRepository {
         )
         return res.rowCount
     }
+
+    async deleteVerificationTokensForUser(
+        userId: string,
+        type: VerificationTokenType
+    ): Promise<number> {
+        const res = await this.pool.query(
+            `DELETE FROM verification_tokens WHERE user_id = $1 AND type = $2 RETURNING id`,
+            [userId, type]
+        )
+        return res.rowCount
+    }
 }

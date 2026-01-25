@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common'
+import {
+    Injectable,
+    UnauthorizedException,
+    Logger,
+    HttpException,
+} from '@nestjs/common'
 import { v4 as uuidv4 } from 'uuid'
 import { UsersService } from '../users/users.service'
 import { TokensService } from '../tokens/tokens.service'
@@ -49,8 +54,31 @@ export class AuthService {
     async validateUser(email: string, password: string) {
         const user = await this.usersService.findByEmail(email)
         if (!user) return null
+
+        // If account is locked, reject early with 423 Locked
+        const lockedUntil = (user as any).lockedUntil
+        if (lockedUntil && new Date(lockedUntil).getTime() > Date.now()) {
+            // Generic message to avoid leaking details
+            throw new HttpException('Account locked', 423)
+        }
+
         const isValid = await comparePasswords(password, (user as any).password)
-        if (!isValid) return null
+        if (!isValid) {
+            // Increment failed attempts; service will set lock if threshold reached
+            try {
+                await this.usersService.incrementFailedLoginAttempts((user as any).id)
+            } catch {
+                // ignore errors in increment path
+            }
+            return null
+        }
+
+        // Successful login: reset attempts and clear lock
+        try {
+            await this.usersService.resetFailedLoginAttempts((user as any).id)
+        } catch {
+            // ignore
+        }
         return user
     }
 

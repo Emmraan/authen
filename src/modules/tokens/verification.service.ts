@@ -1,16 +1,16 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '../../config/config.service'
 import {
-    TokensRepository,
     VerificationTokenRecord,
     VerificationTokenType,
 } from './tokens.repository'
+import { InMemoryTokensRepository } from './in-memory.tokens.repository'
 import { generateRawToken, hashToken } from '../../utils/token.util'
 
 @Injectable()
 export class VerificationService {
     constructor(
-        private repo: TokensRepository,
+        private repo: InMemoryTokensRepository,
         private config: ConfigService
     ) {}
 
@@ -23,6 +23,13 @@ export class VerificationService {
         const hmacKey = this.config.get('HMAC_SECRET')
         const tokenHash = hashToken(raw, hmacKey)
         const expiresAt = new Date(Date.now() + ttlSeconds * 1000)
+
+        // delete any previous tokens for this user/type so resend invalidates old tokens
+        try {
+            await (this.repo as any).deleteVerificationTokensForUser(userId, type)
+        } catch {
+            // ignore if repository doesn't implement; best-effort
+        }
 
         await this.repo.createVerificationToken({
             userId,

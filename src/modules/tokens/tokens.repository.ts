@@ -26,4 +26,8 @@ export interface TokensRepository {
     markVerificationTokenUsed(id: string): Promise<void>
 
     deleteExpiredVerificationTokens(cutoff: Date): Promise<number>
+    deleteVerificationTokensForUser(
+        userId: string,
+        type: VerificationTokenType
+    ): Promise<number>
 }
