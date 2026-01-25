@@ -15,13 +15,27 @@ describe('AuthService (unit)', () => {
         }
         const jwtService: any = { sign: jest.fn(), verify: jest.fn() }
         const config: any = { get: jest.fn().mockReturnValue('secret') }
+        const sessionsService: any = {
+            createSession: jest.fn(),
+            rotate: jest.fn(),
+            findById: jest.fn(),
+            revokeAll: jest.fn(),
+        }
         const sut = new AuthService(
             usersService,
             tokensService,
             jwtService,
-            config
+            config,
+            sessionsService
         )
-        return { sut, usersService, tokensService, jwtService, config }
+        return {
+            sut,
+            usersService,
+            tokensService,
+            jwtService,
+            config,
+            sessionsService,
+        }
     }
 
     it('signup delegates to usersService.create and returns user', async () => {
@@ -80,9 +94,17 @@ describe('AuthService (unit)', () => {
             email: 'a@b.com',
             role: 'r',
         })
-        jwtService.sign.mockReturnValue('newAccess')
+        jwtService.sign.mockImplementation((payload: any) => {
+            // return 'newRefresh' only when signing the single-key refresh payload ({ userId })
+            if (payload && Object.keys(payload).length === 1 && payload.userId)
+                return 'newRefresh'
+            return 'newAccess'
+        })
         const res = await sut.refresh('u1', 'rtoken')
-        expect(res).toEqual({ accessToken: 'newAccess' })
+        expect(res).toEqual({
+            accessToken: 'newAccess',
+            refreshToken: 'newRefresh',
+        })
     })
 
     it('refresh throws UnauthorizedException when verify fails', async () => {

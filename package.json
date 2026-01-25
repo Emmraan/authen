@@ -10,12 +10,14 @@
     "scripts": {
         "start": "nest start",
         "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+        "migrate:run": "node ./scripts/run-migrations.js",
         "build": "tsc -p tsconfig.build.json",
         "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm format:check && pnpm build",
         "lint": "eslint . --ext .ts",
         "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
         "typecheck": "tsc -p tsconfig.json --noEmit",
         "test": "jest --runInBand --config jest.config.cjs",
+        "e2e:staging": "BASE_URL=http://localhost:3000 jest --config=jest.config.cjs --runInBand --testPathPattern=./test/e2e",
         "test:watch": "jest --watch",
         "format:check": "prettier --check .",
         "format:write": "prettier --write .",
@@ -32,7 +34,8 @@
         "dotenv": "^16.0.0",
         "jsonwebtoken": "^9.0.0",
         "reflect-metadata": "^0.1.13",
-        "uuid": "^9.0.0"
+        "uuid": "^9.0.0",
+        "pg": "^8.9.0"
     },
     "devDependencies": {
         "@nestjs/testing": "^11.1.12",

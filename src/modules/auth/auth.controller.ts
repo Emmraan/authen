@@ -45,9 +45,22 @@ export class AuthController {
 
     @HttpCode(HttpStatus.OK)
     @Post('refresh')
-    async refresh(@Body() body: { userId: string; refreshToken: string }) {
-        const { userId, refreshToken } = body
-        const result = await this.authService.refresh(userId, refreshToken)
+    async refresh(
+        @Body()
+        body: {
+            userId: string
+            refreshToken: string
+            sessionId?: string
+        }
+    ) {
+        const { userId, refreshToken, sessionId } = body
+        // debug log removed
+        // no pre-parse here; AuthService performs necessary checks
+        const result = await this.authService.refresh(
+            userId,
+            refreshToken,
+            sessionId
+        )
         return result
     }
 

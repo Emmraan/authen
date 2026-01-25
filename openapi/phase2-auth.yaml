@@ -1,0 +1,409 @@
+openapi: 3.0.3
+info:
+    title: Authen - Phase 2 API
+    version: 2.0.0
+    description: 'OpenAPI spec for Phase-2 production-ready auth features (RBAC, email verification, sessions, password reset, admin).'
+servers:
+    - url: https://api.example.com
+components:
+    securitySchemes:
+        bearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+        cookieRefresh:
+            type: apiKey
+            in: cookie
+            name: refresh_token
+    schemas:
+        ErrorResponse:
+            type: object
+            properties:
+                statusCode:
+                    type: integer
+                error:
+                    type: string
+                message:
+                    type: string
+        SignupRequest:
+            type: object
+            required: [email, password]
+            properties:
+                email:
+                    type: string
+                    format: email
+                password:
+                    type: string
+                name:
+                    type: string
+                deviceInfo:
+                    type: object
+                    additionalProperties: true
+        SignupResponse:
+            type: object
+            properties:
+                message:
+                    type: string
+        LoginRequest:
+            type: object
+            required: [email, password]
+            properties:
+                email:
+                    type: string
+                    format: email
+                password:
+                    type: string
+                deviceInfo:
+                    type: object
+                    additionalProperties: true
+                ipAddress:
+                    type: string
+        TokenResponse:
+            type: object
+            properties:
+                accessToken:
+                    type: string
+                refreshToken:
+                    type: string
+                expiresIn:
+                    type: integer
+                tokenType:
+                    type: string
+                    example: Bearer
+        VerifyEmailRequest:
+            type: object
+            required: [token]
+            properties:
+                token:
+                    type: string
+        ResendVerificationRequest:
+            type: object
+            required: [email]
+            properties:
+                email:
+                    type: string
+                    format: email
+        ForgotPasswordRequest:
+            type: object
+            required: [email]
+            properties:
+                email:
+                    type: string
+                    format: email
+        ResetPasswordRequest:
+            type: object
+            required: [token, newPassword]
+            properties:
+                token:
+                    type: string
+                newPassword:
+                    type: string
+        SessionDTO:
+            type: object
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                deviceInfo:
+                    type: object
+                    additionalProperties: true
+                ipAddress:
+                    type: string
+                expiresAt:
+                    type: string
+                    format: date-time
+                revokedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                lastUsedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+        SessionsResponse:
+            type: array
+            items:
+                $ref: '#/components/schemas/SessionDTO'
+        LogoutAllResponse:
+            type: object
+            properties:
+                message:
+                    type: string
+        AdminRolePatchRequest:
+            type: object
+            required: [role]
+            properties:
+                role:
+                    type: string
+                    example: admin
+        UserAdminResponse:
+            type: object
+            properties:
+                id:
+                    type: string
+                    format: uuid
+                active:
+                    type: boolean
+                role:
+                    type: string
+paths:
+    /auth/signup:
+        post:
+            summary: Create account (sends verification email if enabled)
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SignupRequest'
+            responses:
+                '201':
+                    description: Created
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SignupResponse'
+                '400':
+                    description: Bad request
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+    /auth/login:
+        post:
+            summary: Authenticate and receive tokens
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/LoginRequest'
+            responses:
+                '200':
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/TokenResponse'
+                '401':
+                    description: Unauthorized
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                '423':
+                    description: Account locked
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+    /auth/verify-email:
+        post:
+            summary: Verify an email using one-time token
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/VerifyEmailRequest'
+            responses:
+                '200':
+                    description: Email verified
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SignupResponse'
+                '400':
+                    description: Invalid token
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                '410':
+                    description: Token expired
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+    /auth/resend-verification:
+        post:
+            summary: Resend verification email (ambiguous response)
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ResendVerificationRequest'
+            responses:
+                '200':
+                    description: If user exists, verification sent
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SignupResponse'
+    /auth/forgot-password:
+        post:
+            summary: Request password reset link (ambiguous response)
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ForgotPasswordRequest'
+            responses:
+                '200':
+                    description: If user exists, reset link sent
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SignupResponse'
+    /auth/reset-password:
+        post:
+            summary: Reset password using one-time token
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ResetPasswordRequest'
+            responses:
+                '200':
+                    description: Password changed
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SignupResponse'
+                '400':
+                    description: Invalid token or bad request
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+                '410':
+                    description: Token expired
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+    /auth/sessions:
+        get:
+            summary: List active sessions for authenticated user
+            security:
+                - bearerAuth: []
+            responses:
+                '200':
+                    description: Sessions list
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SessionsResponse'
+                '401':
+                    description: Unauthorized
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+    /auth/logout-all:
+        post:
+            summary: Revoke all sessions for authenticated user
+            security:
+                - bearerAuth: []
+            responses:
+                '200':
+                    description: All sessions revoked
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/LogoutAllResponse'
+                '401':
+                    description: Unauthorized
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+    /admin/users/{id}/activate:
+        patch:
+            summary: Activate a user (admin only)
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+            security:
+                - bearerAuth: []
+            description: Requires `admin` role.
+            responses:
+                '200':
+                    description: User activated
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UserAdminResponse'
+                '403':
+                    description: Forbidden
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+    /admin/users/{id}/deactivate:
+        patch:
+            summary: Deactivate a user (admin only)
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+            security:
+                - bearerAuth: []
+            description: Requires `admin` role.
+            responses:
+                '200':
+                    description: User deactivated
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UserAdminResponse'
+                '403':
+                    description: Forbidden
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+    /admin/users/{id}/role:
+        patch:
+            summary: Change user role (admin only)
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                      format: uuid
+            security:
+                - bearerAuth: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/AdminRolePatchRequest'
+            description: Requires `admin` role.
+            responses:
+                '200':
+                    description: Role changed
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UserAdminResponse'
+                '403':
+                    description: Forbidden
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ErrorResponse'
+security:
+    - {}

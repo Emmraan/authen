@@ -14,7 +14,8 @@ describe('UsersService (unit)', () => {
     beforeEach(() => {
         const repo = new InMemoryUsersRepository()
         const cfg = new StubConfig()
-        usersService = new UsersService(repo, cfg)
+        const mockAudit: any = { log: jest.fn().mockResolvedValue(undefined) }
+        usersService = new UsersService(repo, cfg as any, mockAudit)
     })
 
     it('creates a user and hides password in response', async () => {
@@ -62,7 +63,8 @@ describe('UsersService (unit)', () => {
     it('create uses configured salt rounds >=10 when provided', async () => {
         const repo = new InMemoryUsersRepository()
         const cfg: any = { getNumber: () => 15 }
-        const svc = new UsersService(repo, cfg as any)
+        const mockAudit: any = { log: jest.fn().mockResolvedValue(undefined) }
+        const svc = new UsersService(repo, cfg as any, mockAudit)
         const dto = { email: 'salt@example.com', password: 'pwd' } as any
         await svc.create(dto)
         const calls = (hashPassword as jest.Mock).mock.calls
